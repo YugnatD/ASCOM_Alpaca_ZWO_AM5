@@ -98,7 +98,8 @@ void asi_init_AM5(char *device)
     if (fd_AM5 == -1)
     {
         fprintf(stderr, "Error opening device %s\n", device);
-        exit(1);
+        // exit(1);
+        return ;
     }
     // set parameter of serial port :
     struct termios tty;
@@ -197,6 +198,7 @@ telescope_response_t asi_send_receive_command_AM5(char *cmd)
     return ret;
 }
 
+// GETTER FUNCTIONS
 telescope_response_t asi_get_version()
 {
     return asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_VERSION);
@@ -206,4 +208,347 @@ telescope_response_t asi_get_mount_model()
 {
     return asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_MOUNT_MODEL);
 }
+
+telescope_response_t asi_get_utc(time_t *secs, int *utc_offset)
+{
+    telescope_response_t ret;
+    char command[COMMAND_SIZE];
+    NOT_IMPLEMENTED
+    // get ZWO_AM5_CMD_GET_DATE_TIME_MDY
+
+    // get ZWO_AM5_CMD_GET_DATE_TIME_HMS
+
+    // get ZWO_AM5_CMD_GET_TIME_ZONE
+    ret.success = false;
+    return ret;
+}
+
+telescope_response_t asi_get_sidereal_time(double *sideral_time)
+{
+    telescope_response_t ret;
+    char command[COMMAND_SIZE];
+    NOT_IMPLEMENTED
+    // get ZWO_AM5_CMD_GET_SIDERAL_TIME
+    ret.success = false;
+    return ret;
+}
+
+telescope_response_t asi_get_site(double *latitude, double *longitude)
+{
+    telescope_response_t ret;
+    char command[COMMAND_SIZE];
+    NOT_IMPLEMENTED
+    // get ZWO_AM5_CMD_GET_LATITUDE
+
+    // get ZWO_AM5_CMD_GET_LONGITUDE
+    ret.success = false;
+    return ret;
+}
+
+telescope_response_t asi_get_meridian_settings(bool *flip_enabled, bool *track_passed, int *track_passed_limit)
+{
+    telescope_response_t ret;
+    char command[COMMAND_SIZE];
+    NOT_IMPLEMENTED
+    // get ZWO_AM5_CMD_GET_MERIDIAN_SETTINGS
+
+    ret.success = false;
+    return ret;
+}
+
+telescope_response_t asi_get_coordinates(double *ra, double *dec)
+{
+    telescope_response_t ret;
+    char command[COMMAND_SIZE];
+    NOT_IMPLEMENTED
+    // get ZWO_AM5_CMD_GET_COORDINATES_RA
+
+    // get ZWO_AM5_CMD_GET_COORDINATES_DEC
+    ret.success = false;
+    return ret;
+}
+
+telescope_response_t asi_get_guide_rate(double *ra, double *dec)
+{
+    telescope_response_t ret;
+    char command[COMMAND_SIZE];
+    NOT_IMPLEMENTED
+    // get ZWO_AM5_CMD_GET_SLEW_RATE
+    ret.success = false;
+    return ret;
+}
+
+telescope_response_t asi_get_tracking_status(bool *tracking)
+{
+    telescope_response_t ret;
+    char command[COMMAND_SIZE];
+    NOT_IMPLEMENTED
+    // get ZWO_AM5_CMD_GET_TRACKING_STATUS
+    ret.success = false;
+    return ret;
+}
+
+
+// SETTER FUNCTIONS 
+telescope_response_t asi_set_utc_date(time_t *secs, int utc_offset)
+{
+    char command[COMMAND_SIZE];
+    time_t seconds = *secs + utc_offset * 3600;
+	struct tm tm;
+    telescope_response_t ret;
+	gmtime_r(&seconds, &tm);
+	// SC ZWO_AM5_CMD_SET_DATE_TIME_MDY
+    sprintf(command, ZWO_AM5_CMD_SET_DATE_TIME_MDY, tm.tm_mon + 1, tm.tm_mday, tm.tm_year % 100);
+    ret = asi_send_receive_command_AM5(command);
+    if (ret.success == false){return ret;}
+    // SG ZWO_AM5_CMD_SET_TIME_ZONE
+    sprintf(command, ZWO_AM5_CMD_SET_TIME_ZONE, -utc_offset);
+    ret = asi_send_receive_command_AM5(command);
+    if (ret.success == false){return ret;}
+    // SL ZWO_AM5_CMD_SET_DATE_TIME_HMS
+    sprintf(command, ZWO_AM5_CMD_SET_DATE_TIME_HMS, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    ret = asi_send_receive_command_AM5(command);
+    // if (ret.success == false){return ret;}
+    return ret;
+}
+
+telescope_response_t asi_set_site(double latitude, double longitude)
+{
+    char command[COMMAND_SIZE];
+    telescope_response_t ret;
+    ret.success = false;
+    NOT_IMPLEMENTED
+    // set latitude : ZWO_AM5_CMD_SET_LATITUDE
+
+    // set longitude : ZWO_AM5_CMD_SET_LONGITUDE
+    return ret;
+}
+
+telescope_response_t asi_set_meridian_action(bool flip, bool track)
+{
+    char command[COMMAND_SIZE];
+    telescope_response_t ret;
+    ret.success = false;
+    NOT_IMPLEMENTED
+    // set meridian action : ZWO_AM5_CMD_SET_MERIDIAN_SETTING
+    return ret;
+}
+
+telescope_response_t asi_set_meridian_limit(int16_t limit)
+{
+    char command[COMMAND_SIZE];
+    telescope_response_t ret;
+    ret.success = false;
+    NOT_IMPLEMENTED
+    // set meridian limit : ZWO_AM5_CMD_SET_MERIDIAN_SETTING
+    return ret;
+}
+
+telescope_response_t asi_slew(double ra, double dec)
+{
+    double d, m, s;
+    char command[COMMAND_SIZE];
+    telescope_response_t ret;
+    // set RA : ZWO_AM5_CMD_SET_SLEW_RA
+    telescope_double_to_dms(ra, &d, &m, &s);
+    sprintf(command, ZWO_AM5_CMD_SET_SLEW_RA, (int32_t)d, (int32_t)m, s);
+    ret = asi_send_receive_command_AM5(command);
+    if (ret.success == false){return ret;}
+    // set DEC : ZWO_AM5_CMD_SET_SLEW_DEC
+    telescope_double_to_dms(dec, &d, &m, &s);
+    sprintf(command, ZWO_AM5_CMD_SET_SLEW_DEC, (int32_t)d, (int32_t)m, s);
+    ret = asi_send_receive_command_AM5(command);
+    if (ret.success == false){return ret;}
+    // then goto : ZWO_AM5_CMD_SET_GOTO
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_GOTO);
+    return ret;
+}
+
+telescope_response_t asi_sync(double ra, double dec)
+{
+    double d, m, s;
+    char command[COMMAND_SIZE];
+    telescope_response_t ret;
+    // set RA : ZWO_AM5_CMD_SET_SYNC_RA
+    telescope_double_to_dms(ra, &d, &m, &s);
+    sprintf(command, ZWO_AM5_CMD_SET_SYNC_RA, (int32_t)d, (int32_t)m, s);
+    ret = asi_send_receive_command_AM5(command);
+    if (ret.success == false){return ret;}
+    // set DEC : ZWO_AM5_CMD_SET_SYNC_DEC
+    telescope_double_to_dms(dec, &d, &m, &s);
+    sprintf(command, ZWO_AM5_CMD_SET_SYNC_DEC, (int32_t)d, (int32_t)m, s);
+    ret = asi_send_receive_command_AM5(command);
+    if (ret.success == false){return ret;}
+    // set sync : ZWO_AM5_CMD_SET_SYNC
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_SYNC);
+    return ret;
+}
+
+telescope_response_t asi_set_guide_rate(double ra, double dec)
+{
+    char command[COMMAND_SIZE];
+    telescope_response_t ret;
+    // DEC not used, because, the two rates are linked
+    if(ra != dec){printf("WARNING : RA and DEC rates are linked, DEC rate will be ignored\n");}
+    // set guide rate : ZWO_AM5_CMD_SET_GUIDE_RATE
+    sprintf(command, ZWO_AM5_CMD_SET_GUIDERATE, ra);
+    ret = asi_send_receive_command_AM5(command);
+    return ret;
+}
+
+telescope_response_t asi_set_tracking(bool tracking)
+{
+    char command[COMMAND_SIZE];
+    telescope_response_t ret;
+    if(tracking)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_TRACKING_ON);
+    }
+    else
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_TRACKING_OFF);
+    }
+    return ret;
+}
+
+telescope_response_t asi_set_tracking_rate(track_mode_t mode)
+{
+    telescope_response_t ret;
+    if(mode == TRACK_LUNAR)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_TRACKING_LUNAR);
+    }
+    else if(mode == TRACK_SOLAR)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_TRACKING_SOLAR);
+    }
+    else if(mode == TRACK_SIDEREAL)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_TRACKING_SIDEREAL);
+    }
+    else
+    {
+        ret.success = false;
+        printf("Unknown tracking mode\r\n");
+    }
+    return ret;
+}
+
+telescope_response_t asi_set_slew_rate(uint32_t rate)
+{
+    char command[COMMAND_SIZE];
+    sprintf(command, ZWO_AM5_CMD_SET_SLEW_RATE, rate);
+    return asi_send_receive_command_AM5(command);
+}
+
+telescope_response_t asi_motion_dec(direction_t dir)
+{
+    telescope_response_t ret;
+    if(dir == DIR_POSITIVE)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_MOVING_START_NORTH);
+    }
+    else if(dir == DIR_NEGATIVE)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_MOVING_START_SOUTH);
+    }
+    else if(dir == DIR_STOP)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_MOVING_STOP_NORTH);
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_MOVING_STOP_SOUTH);
+    }
+    else
+    {
+        ret.success = false;
+        printf("Unknown direction\r\n");
+    }
+    return ret;
+}
+
+telescope_response_t asi_motion_ra(direction_t dir)
+{
+    telescope_response_t ret;
+    if(dir == DIR_POSITIVE)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_MOVING_START_EAST);
+    }
+    else if(dir == DIR_NEGATIVE)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_MOVING_START_WEST);
+    }
+    else if(dir == DIR_STOP)
+    {
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_MOVING_STOP_EAST);
+        ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_MOVING_STOP_WEST);
+    }
+    else
+    {
+        ret.success = false;
+        printf("Unknown direction\r\n");
+    }
+    return ret;
+}
+
+telescope_response_t asi_home()
+{
+    return asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_HOME_POSITION);
+}
+
+telescope_response_t asi_park()
+{
+    return asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_GOTO_PARK_POSITION);
+}
+
+telescope_response_t asi_stop()
+{
+    return asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_STOP_ALL);
+}
+
+telescope_response_t asi_clear_alignment_data()
+{
+    return asi_send_receive_command_AM5(ZWO_AM5_CMD_SET_CLEAR_ALIGNMENT);
+}
+
+telescope_response_t asi_guide_north(uint32_t duration)
+{
+    char command[COMMAND_SIZE];
+    sprintf(command, ZWO_AM5_CMD_SET_GUIDE_PULSE_NORTH, duration);
+    return asi_send_receive_command_AM5(command);
+}
+
+telescope_response_t asi_guide_south(uint32_t duration)
+{
+    char command[COMMAND_SIZE];
+    sprintf(command, ZWO_AM5_CMD_SET_GUIDE_PULSE_SOUTH, duration);
+    return asi_send_receive_command_AM5(command);
+}
+
+telescope_response_t asi_guide_east(uint32_t duration)
+{
+    char command[COMMAND_SIZE];
+    sprintf(command, ZWO_AM5_CMD_SET_GUIDE_PULSE_EAST, duration);
+    return asi_send_receive_command_AM5(command);
+}
+
+telescope_response_t asi_guide_west(uint32_t duration)
+{
+    char command[COMMAND_SIZE];
+    sprintf(command, ZWO_AM5_CMD_SET_GUIDE_PULSE_WEST, duration);
+    return asi_send_receive_command_AM5(command);
+}
+
+telescope_response_t asi_set_buzzer_volume(uint32_t volume)
+{
+    char command[COMMAND_SIZE];
+    sprintf(command, ZWO_AM5_CMD_SET_BUZZER_VOLUME, volume);
+    return asi_send_receive_command_AM5(command);
+}
+
+
+
+
+
+
+
+
 

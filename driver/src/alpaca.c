@@ -25,6 +25,11 @@ void initAlpacaDriver(alpacaConfig_t *drv)
     drv->init(drv->serialBus);
 }
 
+void removeAlpacaDriver(alpacaConfig_t *drv)
+{
+    drv->deinit();
+}
+
 static void *threadAscom(void *arg)
 {
     fprintf(stdout, "Thread ASCOM\n");

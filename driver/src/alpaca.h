@@ -43,5 +43,6 @@ typedef struct _alpacaConfig_t {
 
 void initAlpacaSocket(uint32_t portAscom, pthread_t ascomThread);
 void initAlpacaDriver(alpacaConfig_t *drv);
+void removeAlpacaDriver(alpacaConfig_t *drv);
 
 #endif

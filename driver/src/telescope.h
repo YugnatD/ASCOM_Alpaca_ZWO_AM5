@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 
 
 typedef struct _telescope_t { 
@@ -80,6 +81,21 @@ typedef struct _telescope_response_t {
     uint32_t additionalInfoLength;
 } telescope_response_t;
 
+//enum for trackmode
+typedef enum {
+    TRACK_SIDEREAL = 0,
+    TRACK_LUNAR = 1,
+    TRACK_SOLAR = 2
+} track_mode_t;
+
+// enum for direction of movement
+typedef enum {
+    DIR_POSITIVE = 0,
+    DIR_NEGATIVE = 1,
+    DIR_STOP = 2
+} direction_t;
+
 
 void telescope_free_response(telescope_response_t *response);
+void telescope_double_to_dms(double value, double *d, double *m, double *s);
 #endif

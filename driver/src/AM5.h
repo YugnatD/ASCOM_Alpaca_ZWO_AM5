@@ -15,7 +15,10 @@
 #include "alpaca.h"
 
 #define BAUDRATE 9600
+#define COMMAND_SIZE 128
 #define RESPONSE_SIZE 128
+
+#define NOT_IMPLEMENTED printf("NOT IMPLEMENTED YET\r\n");
 
 #define ZWO_AM5_NAME "ZWO AM5"
 #define ZWO_AM5_DESCRIPTION "ZWO AM5"
@@ -88,12 +91,45 @@
 #define ZWO_AM5_CMD_GET_BUZZER_VOLUME ":GBu#"
 
 
+// Utility command :
 void asi_init_AM5(char *device);
 void asi_deinit_AM5();
 void asi_send_command_AM5(char *cmd);
 telescope_response_t asi_receive_command_AM5();
 telescope_response_t asi_send_receive_command_AM5(char *cmd);
+
+
+// GETTER COMMANDS
 telescope_response_t asi_get_version();
 telescope_response_t asi_get_mount_model();
+telescope_response_t asi_get_utc(time_t *secs, int *utc_offset);
+telescope_response_t asi_get_sidereal_time(double *sideral_time);
+telescope_response_t asi_get_site(double *latitude, double *longitude);
+telescope_response_t asi_get_meridian_settings(bool *flip_enabled, bool *track_passed, int *track_passed_limit);
+telescope_response_t asi_get_coordinates(double *ra, double *dec);
+telescope_response_t asi_get_guide_rate(double *ra, double *dec);
+telescope_response_t asi_get_tracking_status(bool *tracking);
 
+// SETTER COMMANDS
+telescope_response_t asi_set_utc_date(time_t *secs, int utc_offset);
+telescope_response_t asi_set_site(double latitude, double longitude);
+telescope_response_t asi_set_meridian_action(bool flip, bool track);
+telescope_response_t asi_set_meridian_limit(int16_t limit);
+telescope_response_t asi_slew(double ra, double dec);
+telescope_response_t asi_sync(double ra, double dec);
+telescope_response_t asi_set_guide_rate(double ra, double dec);
+telescope_response_t asi_set_tracking(bool tracking);
+telescope_response_t asi_set_tracking_rate(track_mode_t mode);
+telescope_response_t asi_set_slew_rate(uint32_t rate);
+telescope_response_t asi_motion_dec(direction_t dir);
+telescope_response_t asi_motion_ra(direction_t dir);
+telescope_response_t asi_home();
+telescope_response_t asi_park();
+telescope_response_t asi_stop();
+telescope_response_t asi_clear_alignment_data();
+telescope_response_t asi_guide_north(uint32_t duration);
+telescope_response_t asi_guide_south(uint32_t duration);
+telescope_response_t asi_guide_east(uint32_t duration);
+telescope_response_t asi_guide_west(uint32_t duration);
+telescope_response_t asi_set_buzzer_volume(uint32_t volume);
 #endif

@@ -17,5 +17,6 @@ int main(int argc, char *argv[])
   alpaca_discovery(ASCOM_DISCOVERY_DEFAULT_PORT, ASCOM_DEFAULT_PORT, &threadDiscovery);
   initAlpacaSocket(ASCOM_DEFAULT_PORT, threadAscom);
   initAlpacaDriver(&zwo_am5_alpaca_config);
+  removeAlpacaDriver(&zwo_am5_alpaca_config);
   pthread_join(threadDiscovery, NULL);
 }
