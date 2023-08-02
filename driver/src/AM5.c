@@ -108,7 +108,7 @@ void asi_init_AM5(char *device)
 
     /* Error Handling */
     if ( tcgetattr ( fd_AM5, &tty ) != 0 ) {
-        printf("Error %d from tcgetattr: %s\n", errno, strerror(errno));
+        fprintf(stderr, "Error %d from tcgetattr: %s\n", errno, strerror(errno));
     }
 
     /* Save old tty parameters */
@@ -135,13 +135,23 @@ void asi_init_AM5(char *device)
     /* Flush Port, then applies attributes */
     tcflush( fd_AM5, TCIFLUSH );
     if ( tcsetattr ( fd_AM5, TCSANOW, &tty ) != 0) {
-    printf("Error %d from tcsetattr: %s\n", errno, strerror(errno));
+        fprintf(stderr, "Error %d from tcsetattr\n", errno);
     }
 
     //check if the mount is an AM5
     telescope_response_t ret;
-    ret = asi_get_mount_model();
-    //TODO : compare ret with AM5
+    ret = asi_get_mount_model(); // should answer AM5#
+    fprintf(stdout, "Mount model : %s\n", ret.additionalInfo);
+    if(strcmp(ret.additionalInfo, "AM5#") != 0)
+    {
+        fprintf(stderr, "Error, the mount is not an AM5\r\n");
+        return ;
+    }
+    telescope_free_response(&ret);
+    // check the version : 
+    ret = asi_get_version(); // should answer
+    fprintf(stdout, "Version : %s\n", ret.additionalInfo);
+    // actually, do not check the version, because, it is not implemented in the driver
 }
 
 void asi_deinit_AM5()
@@ -176,15 +186,34 @@ telescope_response_t asi_receive_command_AM5()
 {
     telescope_response_t ret;
     char response[RESPONSE_SIZE];
-    int n = read(fd_AM5, response, RESPONSE_SIZE);
+    int n = read(fd_AM5, response, RESPONSE_SIZE); // TODO : implement a timeout
     // set default value of the response
     ret.errorNumber = 0;
     ret.success = true;
     ret.additionalInfoLength = n;
-    ret.additionalInfo = malloc(n);
+    ret.additionalInfo = malloc(n+1); // +1 for the \0
     memcpy(ret.additionalInfo, response, n);
-    //then try to cast the answer to see if it contains an error code
-    // TODO 
+    ret.additionalInfo[n] = '\0';
+    //then try to cast the answer to see if it contains an error code, or a success code
+    if(ret.additionalInfo[0] == 'e' && n==3)// example : "e7#", error number is 7
+    {
+        ret.success = false;
+        ret.errorNumber = atoi(ret.additionalInfo + 1); 
+    } else if(ret.additionalInfo[0] == '0' && n==1) // failure "0", check the size too, because it could fail with this kind of answer "01/01/00#" from get_utc
+    {
+        ret.success = false;
+        ret.errorNumber = 0;
+    } else if(ret.additionalInfo[0] == '1' && n==1) // success "1"
+    {
+        ret.success = true;
+        ret.errorNumber = -1;
+    } else // something else, maybe a coordinate, a version number, etc... ("AM5#", "1.3.0#", "01/01/00#, )
+    {
+        // I consider it as a success
+        // fprintf(stdout, "Unknown answer : %s\n", ret.additionalInfo);
+        ret.success = true;
+        ret.errorNumber = -1;
+    }
     return ret;
 }
 
@@ -215,11 +244,16 @@ telescope_response_t asi_get_utc(time_t *secs, int *utc_offset)
     char command[COMMAND_SIZE];
     NOT_IMPLEMENTED
     // get ZWO_AM5_CMD_GET_DATE_TIME_MDY
-
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_DATE_TIME_MDY);
+    printf("ret.additionalInfo : %s\n", ret.additionalInfo); // 01/01/00#
+    if (ret.success == false){return ret;}
     // get ZWO_AM5_CMD_GET_DATE_TIME_HMS
-
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_DATE_TIME_HMS);
+    printf("ret.additionalInfo : %s\n", ret.additionalInfo); // 00:50:24#
+    if (ret.success == false){return ret;}
     // get ZWO_AM5_CMD_GET_TIME_ZONE
-    ret.success = false;
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_TIME_ZONE);
+    printf("ret.additionalInfo : %s\n", ret.additionalInfo); // +00:00#
     return ret;
 }
 
@@ -237,11 +271,15 @@ telescope_response_t asi_get_site(double *latitude, double *longitude)
 {
     telescope_response_t ret;
     char command[COMMAND_SIZE];
-    NOT_IMPLEMENTED
+    NOT_IMPLEMENTED // TODO : convert the coordinates
     // get ZWO_AM5_CMD_GET_LATITUDE
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_LATITUDE);
+    printf("ret.additionalInfo : %s\n", ret.additionalInfo); // +21*17:00#
 
     // get ZWO_AM5_CMD_GET_LONGITUDE
-    ret.success = false;
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_LONGITUDE);
+    printf("ret.additionalInfo : %s\n", ret.additionalInfo); // -006*06:03#
+    // ret.success = false;
     return ret;
 }
 
@@ -319,8 +357,13 @@ telescope_response_t asi_set_site(double latitude, double longitude)
     ret.success = false;
     NOT_IMPLEMENTED
     // set latitude : ZWO_AM5_CMD_SET_LATITUDE
-
+    sprintf(command, ZWO_AM5_CMD_SET_LATITUDE, latitude, latitude); // TODO: convert to real coordinate
+    ret = asi_send_receive_command_AM5(command);
+    if (ret.success == false){return ret;}
     // set longitude : ZWO_AM5_CMD_SET_LONGITUDE
+    sprintf(command, ZWO_AM5_CMD_SET_LONGITUDE, longitude, longitude); // TODO: convert to real coordinate
+    ret = asi_send_receive_command_AM5(command);
+    // if (ret.success == false){return ret;}
     return ret;
 }
 
@@ -384,15 +427,16 @@ telescope_response_t asi_sync(double ra, double dec)
     return ret;
 }
 
+
 telescope_response_t asi_set_guide_rate(double ra, double dec)
 {
     char command[COMMAND_SIZE];
     telescope_response_t ret;
     // DEC not used, because, the two rates are linked
-    if(ra != dec){printf("WARNING : RA and DEC rates are linked, DEC rate will be ignored\n");}
+    if(ra != dec){fprintf(stderr, "WARNING : RA and DEC rates are linked, DEC rate will be ignored\r\n");}
     // set guide rate : ZWO_AM5_CMD_SET_GUIDE_RATE
     sprintf(command, ZWO_AM5_CMD_SET_GUIDERATE, ra);
-    ret = asi_send_receive_command_AM5(command);
+    ret = asi_send_receive_command_AM5(command); // TODO : CHECK PROTOCOL, THIS SETTER DO NOT WORK, BLOCKED HERE
     return ret;
 }
 
@@ -429,7 +473,7 @@ telescope_response_t asi_set_tracking_rate(track_mode_t mode)
     else
     {
         ret.success = false;
-        printf("Unknown tracking mode\r\n");
+        fprintf(stderr, "Unknown tracking mode\r\n");
     }
     return ret;
 }
@@ -460,7 +504,7 @@ telescope_response_t asi_motion_dec(direction_t dir)
     else
     {
         ret.success = false;
-        printf("Unknown direction\r\n");
+        fprintf(stderr, "Unknown direction\r\n");
     }
     return ret;
 }
@@ -484,7 +528,7 @@ telescope_response_t asi_motion_ra(direction_t dir)
     else
     {
         ret.success = false;
-        printf("Unknown direction\r\n");
+        fprintf(stderr, "Unknown direction\r\n");
     }
     return ret;
 }

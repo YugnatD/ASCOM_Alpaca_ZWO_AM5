@@ -76,7 +76,7 @@ typedef struct _telescope_t {
 // Note: The response values of Get Commands starting with G all comes with #.
 typedef struct _telescope_response_t {
     bool success;
-    uint8_t errorNumber;
+    int32_t errorNumber;
     char *additionalInfo;
     uint32_t additionalInfoLength;
 } telescope_response_t;
