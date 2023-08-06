@@ -13,12 +13,12 @@ static void *alpaca_discovery_process_communication(void *arg);
 // static pthread_t alpaca_discovery_thread[NUM_THREAD_MAX];
 
 
-int alpaca_discovery(uint32_t portDiscovery, uint32_t portAscom, pthread_t *thread)
+int initAlpacaDiscovery(alpaca_t *alpaca)
 {
     int opt = 1;
     alpacaDiscoveryConfig_t *config = malloc(sizeof(alpacaDiscoveryConfig_t));
-    config->portDiscovery = portDiscovery;
-    config->portAscom = portAscom;
+    config->portDiscovery = alpaca->portDiscovery;
+    config->portAscom = alpaca->portAscom;
     config->addrlen = sizeof(config->address);
 
     int err;
@@ -47,7 +47,7 @@ int alpaca_discovery(uint32_t portDiscovery, uint32_t portAscom, pthread_t *thre
         exit(EXIT_FAILURE);
     }
     
-    err = pthread_create(thread, NULL, alpaca_discovery_thread, config);
+    err = pthread_create(alpaca->discoveryThread, NULL, alpaca_discovery_thread, config);
     if (err != 0)
     {
         fprintf(stderr, "can't create thread :[%s]", strerror(err));

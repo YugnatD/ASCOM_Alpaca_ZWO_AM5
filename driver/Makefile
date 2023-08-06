@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -pedantic -g -std=gnu99 -O3 
 SANITIZERS=-fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
-LIBS=
+LIBS= -lmicrohttpd -lpthread
 
 DEPMAIN=src/main.o src/telescope.o src/AM5.o src/alpaca.o src/alpacaDiscovery.o
 

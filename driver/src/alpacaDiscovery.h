@@ -11,6 +11,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "alpaca.h"
+
 #define NUM_THREAD_MAX 10
 
 #define ASCOM_DISCOVERY_DEFAULT_PORT 32227
@@ -31,6 +33,6 @@ typedef struct _alpacaDiscoveryResponse_t {
     int new_socket;
 } alpacaDiscoveryResponse_t;
 
-int alpaca_discovery(uint32_t portDiscovery, uint32_t portAscom, pthread_t *thread);
+int initAlpacaDiscovery(alpaca_t *alpaca);
 
 #endif

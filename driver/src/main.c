@@ -11,6 +11,7 @@ extern alpacaConfig_t zwo_am5_alpaca_config;
 
 int main(int argc, char *argv[])
 {
+  
   double ra, dec;
   time_t secs;
   int utcOffset;
@@ -18,9 +19,16 @@ int main(int argc, char *argv[])
   strcpy(zwo_am5_alpaca_config.serialBus, "/dev/ttyACM0");
   pthread_t threadDiscovery;
   pthread_t threadAscom;
-  alpaca_discovery(ASCOM_DISCOVERY_DEFAULT_PORT, ASCOM_DEFAULT_PORT, &threadDiscovery);
-  initAlpacaSocket(ASCOM_DEFAULT_PORT, threadAscom);
-  initAlpacaDriver(&zwo_am5_alpaca_config);
+  alpaca_t alpaca;
+  alpaca.portAscom = ASCOM_DEFAULT_PORT;
+  alpaca.portDiscovery = ASCOM_DISCOVERY_DEFAULT_PORT;
+  alpaca.ascomThread = &threadAscom;
+  alpaca.discoveryThread = &threadDiscovery;
+  alpaca.config = NULL;
+  alpaca.numDevice = 0;
+  initAlpacaDiscovery(&alpaca);
+  initAlpacaSocket(&alpaca);
+  initAlpacaDriver(&alpaca, &zwo_am5_alpaca_config);
 
   // set actual utc date, seems to work
   // secs = time(NULL);
@@ -53,4 +61,5 @@ int main(int argc, char *argv[])
 
   removeAlpacaDriver(&zwo_am5_alpaca_config);
   pthread_join(threadDiscovery, NULL);
+  pthread_join(threadAscom, NULL);
 }

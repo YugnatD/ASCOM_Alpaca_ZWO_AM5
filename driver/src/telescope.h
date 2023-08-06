@@ -98,4 +98,6 @@ typedef enum {
 
 void telescope_free_response(telescope_response_t *response);
 void telescope_double_to_dms(double value, double *d, double *m, double *s);
+bool telescope_stringHMS_to_hms(char *stringHMS, double *h, double *m, double *s);
+double telescope_hms_to_double(double h, double m, double s);
 #endif

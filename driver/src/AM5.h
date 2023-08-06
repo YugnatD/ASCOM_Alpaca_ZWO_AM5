@@ -19,6 +19,7 @@
 #define RESPONSE_SIZE 128
 
 #define NOT_IMPLEMENTED printf("NOT IMPLEMENTED YET\r\n");
+#define NOT_TESTED printf("NOT TESTED YET\r\n");
 
 #define ZWO_AM5_NAME "ZWO AM5"
 #define ZWO_AM5_DESCRIPTION "ZWO AM5"

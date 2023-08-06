@@ -6,12 +6,16 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <microhttpd.h>
+
 
 #define API_VERSION 1
 #define API_NAME "api"
 #define API_VERSION_STRING "v1"
 #define DEVICE_NUMBER 0
 #define DEFAULT_PORT 11111
+
+#define MAX_DEVICE 10
 
 typedef enum _partType {
     partTypeUnknown = 0,
@@ -23,7 +27,7 @@ typedef enum _partType {
 } partType;
 
 typedef struct _alpacaConfig_t {
-  char *name;
+    char *name;
     char *description;
     char *manufacturer;
     char *manufacturerVersion;
@@ -41,8 +45,20 @@ typedef struct _alpacaConfig_t {
     void (*deinit)(void);
 } alpacaConfig_t;
 
-void initAlpacaSocket(uint32_t portAscom, pthread_t ascomThread);
-void initAlpacaDriver(alpacaConfig_t *drv);
-void removeAlpacaDriver(alpacaConfig_t *drv);
+typedef struct _alpaca_t {
+  alpacaConfig_t *config; // list of devices
+  uint32_t numDevice;
+  // alpacaDiscoveryConfig_t *discoveryConfig;
+  uint32_t portAscom;
+  uint32_t portDiscovery;
+  pthread_t *ascomThread;
+  pthread_t *discoveryThread;
+} alpaca_t;
 
+
+
+void initAlpacaSocket(alpaca_t *alpaca);
+void initAlpacaDriver(alpaca_t *alpaca, alpacaConfig_t *drv);
+void removeAlpacaDriver(alpacaConfig_t *drv);
+int requestResponse(uint32_t arg, struct MHD_Connection * connection, uint32_t clientTransactionID);
 #endif

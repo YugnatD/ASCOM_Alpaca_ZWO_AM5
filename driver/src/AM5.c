@@ -243,6 +243,7 @@ telescope_response_t asi_get_utc(time_t *secs, int *utc_offset)
     telescope_response_t ret;
     char command[COMMAND_SIZE];
     NOT_IMPLEMENTED
+    NOT_TESTED
     // get ZWO_AM5_CMD_GET_DATE_TIME_MDY
     ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_DATE_TIME_MDY);
     printf("ret.additionalInfo : %s\n", ret.additionalInfo); // 01/01/00#
@@ -257,13 +258,23 @@ telescope_response_t asi_get_utc(time_t *secs, int *utc_offset)
     return ret;
 }
 
-telescope_response_t asi_get_sidereal_time(double *sideral_time)
+telescope_response_t asi_get_sideral_time(double *sideral_time)
 {
+    double h, m, s;
     telescope_response_t ret;
     char command[COMMAND_SIZE];
-    NOT_IMPLEMENTED
-    // get ZWO_AM5_CMD_GET_SIDERAL_TIME
-    ret.success = false;
+    NOT_TESTED
+    // get ZWO_AM5_CMD_GET_SIDERAL_TIME format : "HH:MM:SS#"
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_SIDERAL_TIME);
+    if (ret.success == false){return ret;}
+    // else cast the answer to a double
+    if(!telescope_stringHMS_to_hms(ret.additionalInfo, &h, &m, &s))
+    {
+        ret.success = false;
+        ret.errorNumber = 0;
+        return ret;
+    }
+    *sideral_time = telescope_hms_to_double(h, m, s);
     return ret;
 }
 
@@ -272,6 +283,7 @@ telescope_response_t asi_get_site(double *latitude, double *longitude)
     telescope_response_t ret;
     char command[COMMAND_SIZE];
     NOT_IMPLEMENTED // TODO : convert the coordinates
+    NOT_TESTED
     // get ZWO_AM5_CMD_GET_LATITUDE
     ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_LATITUDE);
     printf("ret.additionalInfo : %s\n", ret.additionalInfo); // +21*17:00#
@@ -289,8 +301,11 @@ telescope_response_t asi_get_meridian_settings(bool *flip_enabled, bool *track_p
     char command[COMMAND_SIZE];
     NOT_IMPLEMENTED
     // get ZWO_AM5_CMD_GET_MERIDIAN_SETTINGS
-
-    ret.success = false;
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_MERIDIAN_SETTINGS);
+    if (ret.success == false){return ret;}
+    *flip_enabled = (ret.additionalInfo[0] == '1') ? true : false;
+    *track_passed = (ret.additionalInfo[1] == '1') ? true : false;
+    *track_passed_limit = atoi(ret.additionalInfo+2);
     return ret;
 }
 
@@ -310,9 +325,14 @@ telescope_response_t asi_get_guide_rate(double *ra, double *dec)
 {
     telescope_response_t ret;
     char command[COMMAND_SIZE];
-    NOT_IMPLEMENTED
+    // NOT_IMPLEMENTED
+    NOT_TESTED
     // get ZWO_AM5_CMD_GET_SLEW_RATE
-    ret.success = false;
+    ret = asi_send_receive_command_AM5(ZWO_AM5_CMD_GET_SLEW_RATE); // 0.nn#
+    if (ret.success == true){
+        *ra = atof(ret.additionalInfo);
+        *dec = atof(ret.additionalInfo);
+    }
     return ret;
 }
 
@@ -430,13 +450,18 @@ telescope_response_t asi_sync(double ra, double dec)
 
 telescope_response_t asi_set_guide_rate(double ra, double dec)
 {
+    double cmp_ra, cmp_dec;
     char command[COMMAND_SIZE];
     telescope_response_t ret;
+    NOT_TESTED
     // DEC not used, because, the two rates are linked
     if(ra != dec){fprintf(stderr, "WARNING : RA and DEC rates are linked, DEC rate will be ignored\r\n");}
     // set guide rate : ZWO_AM5_CMD_SET_GUIDE_RATE
     sprintf(command, ZWO_AM5_CMD_SET_GUIDERATE, ra);
-    ret = asi_send_receive_command_AM5(command); // TODO : CHECK PROTOCOL, THIS SETTER DO NOT WORK, BLOCKED HERE
+    // ret = asi_send_receive_command_AM5(command); // THIS COMMAND DOES NOT GET RESPONSE
+    // Read Back the value to check
+    ret = asi_get_guide_rate(&cmp_ra, &cmp_dec);
+    if(cmp_ra != ra){ret.success = false;}
     return ret;
 }
 
