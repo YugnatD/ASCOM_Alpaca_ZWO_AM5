@@ -21,7 +21,8 @@
 #define DISCOVERY_MESSAGE "alpacadiscovery1"
 
 typedef struct _alpacaDiscoveryConfig_t {
-    struct sockaddr_in address;
+    struct sockaddr_in server_addr;
+    struct sockaddr_in client_addr;
     uint32_t portDiscovery;
     uint32_t portAscom;
     int socket;

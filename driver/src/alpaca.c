@@ -66,18 +66,27 @@ static int process_request(void *cls, struct MHD_Connection * connection, const 
     alpaca_t *alpaca = (alpaca_t *)cls;
     struct MHD_Response * response;
     int ret;
-    printf("URL: %s\n", url);
-    if (0 != strcmp(method, "GET")) {return MHD_NO; /* unexpected method */}
+    char strResponse[8192];
+    char Value[4096];
+    printf("URL: %s\n", url); // "/"
+    printf("Method: %s\n", method); // "GET"
+    printf("Version: %s\n", version); // "HTTP/1.1"
+    printf("Upload data: %s\n", upload_data); // null / Upload data: ClientTransactionID=24&ClientID=31927&Connected=True
+    printf("Upload data size: %d\n", *upload_data_size); // 0 / 52
+    // printf("Response: %d\n", ret); // "1"
+    printf("\r\n");
+    // Accept GET AND PUT request
+    if (0 != strcmp(method, "GET") && 0 != strcmp(method, "PUT")){return MHD_NO;}
     /* The first time only the headers are valid, do not respond in the first round... */ 
     if (&dummy != *ptr){*ptr = &dummy;return MHD_YES;}
     if (0 != *upload_data_size){ return MHD_NO; /* upload data in a GET!? */}
     *ptr = NULL; /* clear context pointer */
-    printf("URL: %s\n", url); // "/"
-    printf("Method: %s\n", method); // "GET"
-    printf("Version: %s\n", version); // "HTTP/1.1"
-    printf("Upload data: %s\n", upload_data); // null
-    printf("Upload data size: %d\n", *upload_data_size); // 0
-    printf("Response: %d\n", ret); // "1"
+    // printf("URL: %s\n", url); // "/"
+    // printf("Method: %s\n", method); // "GET"
+    // printf("Version: %s\n", version); // "HTTP/1.1"
+    // printf("Upload data: %s\n", upload_data); // null
+    // printf("Upload data size: %d\n", *upload_data_size); // 0
+    // printf("Response: %d\n", ret); // "1"
 
     // TODO : move to a function to process the request
     if (0 == strcmp(url, "/")) {
@@ -91,9 +100,35 @@ static int process_request(void *cls, struct MHD_Connection * connection, const 
         response = MHD_create_response_from_buffer (strlen(RESPONSE_TEST_2),(void*) RESPONSE_TEST_2, MHD_RESPMEM_PERSISTENT);
         ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
     } else if (0 == strcmp(url, "/api/v1/telescope/0/connected")) {
+        printf("CONNECTED\r\n");
         // response = MHD_create_response_from_buffer (strlen(RESPONSE_TEST_2),(void*) RESPONSE_TEST_2, MHD_RESPMEM_PERSISTENT);
         // ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
-        ret = requestResponse(0, connection, 0);
+        // ret = requestResponse(strResponse, 0, connection, 0);
+        sprintf(strResponse, "{\"Value\": \"\", \"ClientTransactionID\": %d, \"ServerTransactionID\": %d, \"ErrorNumber\": %d, \"ErrorMessage\": \"%s\"}", 0, 0, 0, "");
+        response = MHD_create_response_from_buffer (strlen(strResponse),(void*) strResponse, MHD_RESPMEM_PERSISTENT);
+        ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    } else if (0 == strcmp(url, "/management/apiversions")) {
+        // ret = requestResponse(strResponse, 1, connection, 0);
+        sprintf(strResponse, "{\"Value\": [%d], \"ClientTransactionID\": %d, \"ServerTransactionID\": %d, \"ErrorNumber\": %d, \"ErrorMessage\": \"%s\"}", 1, 0, 0, 0, "");
+        response = MHD_create_response_from_buffer (strlen(strResponse),(void*) strResponse, MHD_RESPMEM_PERSISTENT);
+        ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    } else if (0 == strcmp(url, "/management/v1/description")) {
+        // Value = {"ServerName": self.name, "Manufacturer": self.manufacturer, "ManufacturerVersion": self.manufacturer_version, "Location": self.location}
+        sprintf(Value, "{\"ServerName\": \"%s\", \"Manufacturer\": \"%s\", \"ManufacturerVersion\": \"%s\", \"Location\": \"%s\"}", alpaca->config[0].name, alpaca->config[0].manufacturer, alpaca->config[0].manufacturerVersion, alpaca->config[0].location);
+        sprintf(strResponse, "{\"Value\": %s, \"ClientTransactionID\": %d, \"ServerTransactionID\": %d, \"ErrorNumber\": %d, \"ErrorMessage\": \"%s\"}", Value, 0, 0, 0, "");
+        response = MHD_create_response_from_buffer (strlen(strResponse),(void*) strResponse, MHD_RESPMEM_PERSISTENT);
+        ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    } else if (0 == strcmp(url, "/management/v1/configureddevices")) {
+        // Value = [{"DeviceName": self.name, "DeviceType": DEVICE_TYPE, "DeviceNumber": int(DEVICE_NUMBER), "UniqueID": self.UUID}]
+        sprintf(Value, "[{\"DeviceName\": \"%s\", \"DeviceType\": \"telescope\", \"DeviceNumber\": %d, \"UniqueID\": \"%s\"}]", alpaca->config[0].name, DEVICE_NUMBER, alpaca->config[0].UUID);
+        sprintf(strResponse, "{\"Value\": %s, \"ClientTransactionID\": %d, \"ServerTransactionID\": %d, \"ErrorNumber\": %d, \"ErrorMessage\": \"%s\"}", Value, 0, 0, 0, "");
+        response = MHD_create_response_from_buffer (strlen(strResponse),(void*) strResponse, MHD_RESPMEM_PERSISTENT);
+        ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    } else if (0 == strcmp(url, "/api/v1/telescope/0/interfaceversion")) {
+        // interface verions == "1"
+        sprintf(strResponse, "{\"Value\": \"1\", \"ClientTransactionID\": %d, \"ServerTransactionID\": %d, \"ErrorNumber\": %d, \"ErrorMessage\": \"%s\"}", 0, 0, 0, "");
+        response = MHD_create_response_from_buffer (strlen(strResponse),(void*) strResponse, MHD_RESPMEM_PERSISTENT);
+        ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
     } else {
         response = MHD_create_response_from_buffer (strlen(DEFAULT_RESPONSE),(void*) DEFAULT_RESPONSE, MHD_RESPMEM_PERSISTENT);
         ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
@@ -102,6 +137,23 @@ static int process_request(void *cls, struct MHD_Connection * connection, const 
     return ret;
 }
 
+// Example of request :
+// ClientTransactionID=24&ClientID=31927&Connected=True size = 52
+// NULL, size = 0
+// void castUploadData(char* uploadData, uint32_t sizeUpload, uint32_t *clientTransID, uint32_t *clientID, char *ptrExtra)
+// {
+//     uint32_t lenClientTransID = sizeof("ClientTransactionID=") - 1;
+//     *clientTransID = 0;
+//     *clientID = 0;
+//     *ptrExtra = 0; // Zero terminated string
+//     // FOR NOW I WILL CONSIDER THE UPLAOD DATA TO BE ALWAYS IN THE FORMAT ClientTransactionID=24&ClientID=31927&Connected=True OR NULL
+//     // TODO : MAKE A FUNCTION TO PARSE THE UPLOAD DATA, IN A MORE GENERIC WAY
+//     // start by checking if uploadData is NULL
+//     if (uploadData == NULL || sizeUpload == 0) {return;}
+//     // skip the first part of the upload data ClientTransactionID= then atoi the value
+//     *clientTransID = atoi(uploadData + lenClientTransID);
+// }
+
 // this create a response in format :
 // {"Value": Value, "ClientTransactionID": ClientTransactionID, "ServerTransactionID":  ServerTransID, "ErrorNumber": ErrorNumber, "ErrorMessage": ErrorMessage}
 // Value is the value of the request
@@ -109,15 +161,14 @@ static int process_request(void *cls, struct MHD_Connection * connection, const 
 // ClientTransactionID is the transaction ID of the request 
 // ErrorNumber is the error number of the request (0 if no error)
 // ErrorMessage is the error message of the request (empty if no error) ""
-int requestResponse(uint32_t arg, struct MHD_Connection * connection, uint32_t clientTransactionID)
+int requestResponse(char *buffer, uint32_t arg, struct MHD_Connection * connection, uint32_t clientTransactionID)
 {
     int ret;
     struct MHD_Response * response;
-    char strResponse[1024];
-    sprintf(strResponse, "{\"Value\": %d, \"ClientTransactionID\": %d, \"ServerTransactionID\": %d, \"ErrorNumber\": %d, \"ErrorMessage\": \"%s\"}", arg, clientTransactionID, 0, 0, "");
-    response = MHD_create_response_from_buffer (strlen(strResponse),(void*) strResponse, MHD_RESPMEM_PERSISTENT);
+    sprintf(buffer, "{\"Value\": %d, \"ClientTransactionID\": %d, \"ServerTransactionID\": %d, \"ErrorNumber\": %d, \"ErrorMessage\": \"%s\"}", arg, clientTransactionID, 0, 0, "");
+    response = MHD_create_response_from_buffer (strlen(buffer),(void*) buffer, MHD_RESPMEM_PERSISTENT);
     ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
-    MHD_destroy_response(response);
+    // MHD_destroy_response(response);
     return ret;
 }
 

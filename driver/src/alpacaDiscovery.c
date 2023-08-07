@@ -10,43 +10,32 @@ Description :
 static void *alpaca_discovery_thread(void *arg);
 static void *alpaca_discovery_process_communication(void *arg);
 
-// static pthread_t alpaca_discovery_thread[NUM_THREAD_MAX];
-
 
 int initAlpacaDiscovery(alpaca_t *alpaca)
 {
     int opt = 1;
+    char buffer[1024] = {0};
     alpacaDiscoveryConfig_t *config = malloc(sizeof(alpacaDiscoveryConfig_t));
     config->portDiscovery = alpaca->portDiscovery;
     config->portAscom = alpaca->portAscom;
-    config->addrlen = sizeof(config->address);
+    config->addrlen = sizeof(config->server_addr);
 
     int err;
-    // init a socket to listen on portDiscovery
-    if ((config->socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if ((config->socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
-    // Forcefully attaching socket to the port 
-    if (setsockopt(config->socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
+    config->server_addr.sin_family = AF_INET;
+    config->server_addr.sin_port = htons(ASCOM_DISCOVERY_DEFAULT_PORT);
+    config->server_addr.sin_addr.s_addr = INADDR_ANY; //inet_addr("");
+
+    // Bind to the set port and IP:
+    if(bind(config->socket, (struct sockaddr*)&config->server_addr, sizeof(config->server_addr)) < 0){
+        printf("Couldn't bind to the port\n");
+        return -1;
     }
-    config->address.sin_family = AF_INET;
-    config->address.sin_addr.s_addr = INADDR_ANY;
-    config->address.sin_port = htons(ASCOM_DISCOVERY_DEFAULT_PORT);
-  
-    // Forcefully attaching socket to the port 8080
-    if (bind(config->socket, (struct sockaddr*)&config->address, sizeof(config->address)) < 0) {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-    if (listen(config->socket, NUM_THREAD_MAX) < 0) {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-    
+
     err = pthread_create(alpaca->discoveryThread, NULL, alpaca_discovery_thread, config);
     if (err != 0)
     {
@@ -60,67 +49,27 @@ int initAlpacaDiscovery(alpaca_t *alpaca)
 static void *alpaca_discovery_thread(void *arg)
 {
     alpacaDiscoveryConfig_t *config = (alpacaDiscoveryConfig_t *)arg;
-    int new_socket, valread;
+    fprintf(stdout, "Listening on port %d\n", config->portDiscovery);
+    // int valread;
     char buffer[1024] = {0};
     while (1)
     {
-        if ((new_socket = accept(config->socket, (struct sockaddr*)&config->address, (socklen_t*)&config->addrlen)) < 0) {
-            perror("accept");
-            exit(EXIT_FAILURE);
+        fprintf(stdout, "Waiting for message... on socket %d\n", config->socket);
+        if (recvfrom(config->socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&config->client_addr, &config->addrlen) < 0){
+            printf("Couldn't receive\n");
+            return -1;
         }
-        valread = read(new_socket, buffer, 1024);
-        if (valread == 0)
+        fprintf(stdout, "Message received: %s\n", buffer);
+
+        // compare the message received to the discovery message
+        if (strcmp(buffer, DISCOVERY_MESSAGE) == 0)
         {
-            // end of connection
-            break;
-        }
-        else if (valread < 0)
-        {
-            return NULL;
-        }
-        else
-        {
-            // compare the message received to the discovery message
-            if (strcmp(buffer, DISCOVERY_MESSAGE) == 0)
-            {
-                // send the answer as a form of json string
-                sprintf(buffer, "{\"AlpacaPort\": %d}", config->portAscom);
-                
-            }
+            fprintf(stdout, "Discovery message received\n");
+            // send the answer as a form of json string
+            sprintf(buffer, "{\"AlpacaPort\": %d}", config->portAscom);
+            fprintf(stdout, "Sending answer: %s\n", buffer);
+            sendto(config->socket, buffer, sizeof(buffer), 0, (struct sockaddr*)&config->client_addr, config->addrlen);
         }
     }
-    close(new_socket);
     return NULL;
 }
-
-// this thread process the message received, answer to the request and end the connection if needed
-// static void *alpaca_discovery_process_communication(void *arg)
-// {
-//     int socket = (int *)arg;
-//     char buffer[1024] = {0};
-//     int valread;
-//     while (1)
-//     {
-//         valread = read(socket, buffer, 1024);
-//         if (valread == 0)
-//         {
-//             // end of connection
-//             break;
-//         }
-//         else if (valread < 0)
-//         {
-//             perror("read");
-//             exit(EXIT_FAILURE);
-//         }
-//         else
-//         {
-//             // compare the message received to the discovery message
-//             if (strcmp(buffer, DISCOVERY_MESSAGE) == 0)
-//             {
-//                 // send the answer as a form of json string
-//                 // fprintf(buffer, "{\"AlpacaPort\": %d}", config->portAscom);
-                
-//             }
-//         }
-//     }
-// }

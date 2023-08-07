@@ -60,5 +60,5 @@ typedef struct _alpaca_t {
 void initAlpacaSocket(alpaca_t *alpaca);
 void initAlpacaDriver(alpaca_t *alpaca, alpacaConfig_t *drv);
 void removeAlpacaDriver(alpacaConfig_t *drv);
-int requestResponse(uint32_t arg, struct MHD_Connection * connection, uint32_t clientTransactionID);
+int requestResponse(char *buffer, uint32_t arg, struct MHD_Connection * connection, uint32_t clientTransactionID);
 #endif
