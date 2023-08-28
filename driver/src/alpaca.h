@@ -26,6 +26,14 @@ typedef enum _partType {
     partTypeMount = 5,
 } partType;
 
+typedef enum _responseTypeAlpaca {
+    integerType = 0, // %d
+    floatType = 1, // %f
+    integerList = 2, // [%d]
+    floatList = 3, // [%f]
+    stringType = 4, // \"%s\"
+} responseTypeAlpaca;
+
 typedef struct _alpacaConfig_t {
     char *name;
     char *description;
@@ -60,5 +68,8 @@ typedef struct _alpaca_t {
 void initAlpacaSocket(alpaca_t *alpaca);
 void initAlpacaDriver(alpaca_t *alpaca, alpacaConfig_t *drv);
 void removeAlpacaDriver(alpacaConfig_t *drv);
-int requestResponse(char *buffer, uint32_t arg, struct MHD_Connection * connection, uint32_t clientTransactionID);
+int requestResponse(char *buffer, char *value, int32_t errorNumber, char *errorMessage, struct MHD_Connection * connection, uint32_t clientTransactionID);
+void castUploadData(char* uploadData, uint32_t sizeUpload, uint32_t *clientTransID, uint32_t *clientID, char *ptrExtra);
+void generateValueReponse(void *data, responseTypeAlpaca t, uint32_t num, char *str);
+
 #endif
